@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useEffect, useRef } from 'react';
+import * as THREE from 'three';
 
 export default function ParticleLogoEngine({ 
   particleCount = 2100, 
@@ -40,29 +41,6 @@ export default function ParticleLogoEngine({
 
   useEffect(() => {
     let isMounted = true;
-
-    const loadThree = () => {
-      if (typeof window !== 'undefined' && window.THREE) return Promise.resolve(window.THREE);
-      return new Promise((resolve) => {
-        const existing = document.getElementById('threejs-cdn');
-        if (existing) {
-          if (window.THREE) return resolve(window.THREE);
-          existing.addEventListener('load', () => resolve(window.THREE));
-          const checkTimer = setInterval(() => {
-            if (window.THREE) {
-              clearInterval(checkTimer);
-              resolve(window.THREE);
-            }
-          }, 30);
-          return;
-        }
-        const s = document.createElement('script');
-        s.id = 'threejs-cdn';
-        s.src = 'https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js';
-        s.onload = () => resolve(window.THREE);
-        document.head.appendChild(s);
-      });
-    };
 
     const sampleLogoPositions = (totalPoints = 2100) => {
       const sampleCanvas = document.createElement('canvas');
@@ -144,174 +122,167 @@ export default function ParticleLogoEngine({
       return { points, homeCoords, velocities, colors, scatterVectors };
     };
 
-    loadThree().then((THREE) => {
-      if (!isMounted || !containerRef.current || !canvasRef.current) return;
+    if (!isMounted || !containerRef.current || !canvasRef.current) return;
 
-      const container = containerRef.current;
-      const width = container.clientWidth || 400;
-      const height = container.clientHeight || 400;
+    const container = containerRef.current;
+    const width = container.clientWidth || 400;
+    const height = container.clientHeight || 400;
 
-      const scene = new THREE.Scene();
-      const camera = new THREE.PerspectiveCamera(45, width / height, 0.1, 1000);
-      camera.position.z = 18;
+    const scene = new THREE.Scene();
+    const camera = new THREE.PerspectiveCamera(45, width / height, 0.1, 1000);
+    camera.position.z = 18;
 
-      const renderer = new THREE.WebGLRenderer({
-        canvas: canvasRef.current,
-        alpha: true,
-        antialias: true,
-        powerPreference: "high-performance"
-      });
-      renderer.setSize(width, height);
-      renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
+    const renderer = new THREE.WebGLRenderer({
+      canvas: canvasRef.current,
+      alpha: true,
+      antialias: true,
+      powerPreference: "high-performance"
+    });
+    renderer.setSize(width, height);
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
 
-      const { points, homeCoords, velocities, colors, scatterVectors } = sampleLogoPositions(particleCount);
+    const { points, homeCoords, velocities, colors, scatterVectors } = sampleLogoPositions(particleCount);
 
-      const geometry = new THREE.BufferGeometry();
-      geometry.setAttribute('position', new THREE.Float32BufferAttribute(points, 3));
-      geometry.setAttribute('color', new THREE.Float32BufferAttribute(colors, 3));
+    const geometry = new THREE.BufferGeometry();
+    geometry.setAttribute('position', new THREE.Float32BufferAttribute(points, 3));
+    geometry.setAttribute('color', new THREE.Float32BufferAttribute(colors, 3));
 
-      const circleCanvas = document.createElement('canvas');
-      circleCanvas.width = 64;
-      circleCanvas.height = 64;
-      const cCtx = circleCanvas.getContext('2d');
-      cCtx.beginPath();
-      cCtx.arc(32, 32, 28, 0, Math.PI * 2);
-      cCtx.fillStyle = '#ffffff';
-      cCtx.fill();
-      const circleTexture = new THREE.CanvasTexture(circleCanvas);
+    const circleCanvas = document.createElement('canvas');
+    circleCanvas.width = 64;
+    circleCanvas.height = 64;
+    const cCtx = circleCanvas.getContext('2d');
+    cCtx.beginPath();
+    cCtx.arc(32, 32, 28, 0, Math.PI * 2);
+    cCtx.fillStyle = '#ffffff';
+    cCtx.fill();
+    const circleTexture = new THREE.CanvasTexture(circleCanvas);
 
-      const material = new THREE.PointsMaterial({
-        size: dotSize,
-        vertexColors: true,
-        transparent: true,
-        opacity: 0.88,
-        map: circleTexture,
-        depthWrite: false,
-        blending: THREE.NormalBlending
-      });
+    const material = new THREE.PointsMaterial({
+      size: dotSize,
+      vertexColors: true,
+      transparent: true,
+      opacity: 0.88,
+      map: circleTexture,
+      depthWrite: false,
+      blending: THREE.NormalBlending
+    });
 
-      const particleSystem = new THREE.Points(geometry, material);
-      scene.add(particleSystem);
+    const particleSystem = new THREE.Points(geometry, material);
+    scene.add(particleSystem);
 
-      stateRef.current.scene = scene;
-      stateRef.current.camera = camera;
-      stateRef.current.renderer = renderer;
-      stateRef.current.particles = {
-        system: particleSystem,
-        homeCoords,
-        velocities,
-        scatterVectors,
-        count: points.length / 3
-      };
+    stateRef.current.scene = scene;
+    stateRef.current.camera = camera;
+    stateRef.current.renderer = renderer;
+    stateRef.current.particles = {
+      system: particleSystem,
+      homeCoords,
+      velocities,
+      scatterVectors,
+      count: points.length / 3
+    };
 
-      const handleScroll = () => {
-        const scrollY = window.scrollY || window.pageYOffset;
-        const heroHeight = window.innerHeight * 0.9;
-        stateRef.current.targetScrollDispersal = Math.min(Math.max(scrollY / heroHeight, 0), 1.6);
-      };
+    const handleScroll = () => {
+      const scrollY = window.scrollY || window.pageYOffset;
+      const heroHeight = window.innerHeight * 0.9;
+      stateRef.current.targetScrollDispersal = Math.min(Math.max(scrollY / heroHeight, 0), 1.6);
+    };
 
-      const handleWheel = (e) => {
-        stateRef.current.wheelImpulse = Math.min(Math.abs(e.deltaY) * 0.003, 1.2);
-      };
+    const handleWheel = (e) => {
+      stateRef.current.wheelImpulse = Math.min(Math.abs(e.deltaY) * 0.003, 1.2);
+    };
 
-      window.addEventListener('scroll', handleScroll, { passive: true });
-      window.addEventListener('wheel', handleWheel, { passive: true });
+    window.addEventListener('scroll', handleScroll, { passive: true });
+    window.addEventListener('wheel', handleWheel, { passive: true });
 
-      let time = 0;
-      const animate = () => {
-        if (!isMounted) return;
-        time += 0.016;
+    let time = 0;
+    const animate = () => {
+      if (!isMounted) return;
+      time += 0.016;
 
-        const state = stateRef.current;
-        const pState = state.particles;
+      const state = stateRef.current;
+      const pState = state.particles;
 
-        state.scrollDispersal += (state.targetScrollDispersal - state.scrollDispersal) * 0.08;
-        state.wheelImpulse *= 0.91;
-        state.shockwave *= 0.93;
+      state.scrollDispersal += (state.targetScrollDispersal - state.scrollDispersal) * 0.08;
+      state.wheelImpulse *= 0.91;
+      state.shockwave *= 0.93;
 
-        const combinedScatter = state.scrollDispersal * 3.4 + state.wheelImpulse * 2.5 + state.shockwave * 5.0;
+      const combinedScatter = state.scrollDispersal * 3.4 + state.wheelImpulse * 2.5 + state.shockwave * 5.0;
 
-        particleSystem.rotation.x += (state.targetRotX - particleSystem.rotation.x) * 0.06;
-        particleSystem.rotation.y += (state.targetRotY - particleSystem.rotation.y) * 0.06;
+      particleSystem.rotation.x += (state.targetRotX - particleSystem.rotation.x) * 0.06;
+      particleSystem.rotation.y += (state.targetRotY - particleSystem.rotation.y) * 0.06;
 
-        if (pState) {
-          const positions = pState.system.geometry.attributes.position.array;
-          const homes = pState.homeCoords;
-          const vels = pState.velocities;
-          const scatters = pState.scatterVectors;
-          const count = pState.count;
-          const mX = state.mouseX;
-          const mY = state.mouseY;
+      if (pState) {
+        const positions = pState.system.geometry.attributes.position.array;
+        const homes = pState.homeCoords;
+        const vels = pState.velocities;
+        const scatters = pState.scatterVectors;
+        const count = pState.count;
+        const mX = state.mouseX;
+        const mY = state.mouseY;
 
-          for (let i = 0; i < count; i++) {
-            const i3 = i * 3;
-            let px = positions[i3];
-            let py = positions[i3 + 1];
-            let pz = positions[i3 + 2];
+        for (let i = 0; i < count; i++) {
+          const i3 = i * 3;
+          let px = positions[i3];
+          let py = positions[i3 + 1];
+          let pz = positions[i3 + 2];
 
-            const breath = Math.sin(time * 1.5 + i * 0.02) * 0.08;
-            const targetX = homes[i3] + scatters[i3] * combinedScatter;
-            const targetY = homes[i3 + 1] + scatters[i3 + 1] * combinedScatter + breath;
-            const targetZ = homes[i3 + 2] + scatters[i3 + 2] * combinedScatter;
+          const breath = Math.sin(time * 1.5 + i * 0.02) * 0.08;
+          const targetX = homes[i3] + scatters[i3] * combinedScatter;
+          const targetY = homes[i3 + 1] + scatters[i3 + 1] * combinedScatter + breath;
+          const targetZ = homes[i3 + 2] + scatters[i3 + 2] * combinedScatter;
 
-            const dx = px - mX;
-            const dy = py - mY;
-            const distSq = dx * dx + dy * dy;
+          const dx = px - mX;
+          const dy = py - mY;
+          const distSq = dx * dx + dy * dy;
 
-            if (distSq < 9.0) {
-              const dist = Math.sqrt(distSq) || 0.01;
-              const force = (1.0 - dist / 3.0) * 0.35;
-              vels[i3] += (dx / dist) * force;
-              vels[i3 + 1] += (dy / dist) * force;
-              vels[i3 + 2] += (Math.random() - 0.5) * force * 1.5;
-            }
-
-            vels[i3] += (targetX - px) * 0.075;
-            vels[i3 + 1] += (targetY - py) * 0.075;
-            vels[i3 + 2] += (targetZ - pz) * 0.075;
-
-            vels[i3] *= 0.86;
-            vels[i3 + 1] *= 0.86;
-            vels[i3 + 2] *= 0.86;
-
-            positions[i3] += vels[i3];
-            positions[i3 + 1] += vels[i3 + 1];
-            positions[i3 + 2] += vels[i3 + 2];
+          if (distSq < 9.0) {
+            const dist = Math.sqrt(distSq) || 0.01;
+            const force = (1.0 - dist / 3.0) * 0.35;
+            vels[i3] += (dx / dist) * force;
+            vels[i3 + 1] += (dy / dist) * force;
+            vels[i3 + 2] += (Math.random() - 0.5) * force * 1.5;
           }
 
-          pState.system.geometry.attributes.position.needsUpdate = true;
+          vels[i3] += (targetX - px) * 0.075;
+          vels[i3 + 1] += (targetY - py) * 0.075;
+          vels[i3 + 2] += (targetZ - pz) * 0.075;
+
+          vels[i3] *= 0.86;
+          vels[i3 + 1] *= 0.86;
+          vels[i3 + 2] *= 0.86;
+
+          positions[i3] += vels[i3];
+          positions[i3 + 1] += vels[i3 + 1];
+          positions[i3 + 2] += vels[i3 + 2];
         }
 
-        renderer.render(scene, camera);
-        animFrameRef.current = requestAnimationFrame(animate);
-      };
+        pState.system.geometry.attributes.position.needsUpdate = true;
+      }
 
+      renderer.render(scene, camera);
       animFrameRef.current = requestAnimationFrame(animate);
+    };
 
-      const handleResize = () => {
-        if (!containerRef.current || !renderer || !camera) return;
-        const newW = containerRef.current.clientWidth;
-        const newH = containerRef.current.clientHeight;
-        camera.aspect = newW / newH;
-        camera.updateProjectionMatrix();
-        renderer.setSize(newW, newH);
-      };
+    animFrameRef.current = requestAnimationFrame(animate);
 
-      window.addEventListener('resize', handleResize);
+    const handleResize = () => {
+      if (!containerRef.current || !renderer || !camera) return;
+      const newW = containerRef.current.clientWidth;
+      const newH = containerRef.current.clientHeight;
+      camera.aspect = newW / newH;
+      camera.updateProjectionMatrix();
+      renderer.setSize(newW, newH);
+    };
 
-      return () => {
-        isMounted = false;
-        window.removeEventListener('scroll', handleScroll);
-        window.removeEventListener('wheel', handleWheel);
-        window.removeEventListener('resize', handleResize);
-        if (animFrameRef.current) cancelAnimationFrame(animFrameRef.current);
-        if (renderer) renderer.dispose();
-      };
-    });
+    window.addEventListener('resize', handleResize);
 
     return () => {
       isMounted = false;
+      window.removeEventListener('scroll', handleScroll);
+      window.removeEventListener('wheel', handleWheel);
+      window.removeEventListener('resize', handleResize);
       if (animFrameRef.current) cancelAnimationFrame(animFrameRef.current);
+      if (renderer) renderer.dispose();
     };
   }, [particleCount, dotSize, dotColor]);
 
@@ -326,7 +297,7 @@ export default function ParticleLogoEngine({
     stateRef.current.targetRotX = -yNorm * 0.35;
   };
 
-  const handlePointerLeave = () => {
+  const handlePointerLeave2 = () => {
     stateRef.current.mouseX = 9999;
     stateRef.current.mouseY = 9999;
     stateRef.current.targetRotX = 0;
@@ -337,7 +308,7 @@ export default function ParticleLogoEngine({
     <div 
       ref={containerRef}
       onMouseMove={handlePointerMove}
-      onMouseLeave={handlePointerLeave}
+      onMouseLeave={handlePointerLeave2}
       onClick={() => { stateRef.current.shockwave = 1.0; }}
       className="w-full h-full min-h-[360px] sm:min-h-[460px] lg:min-h-[520px] relative flex items-center justify-center cursor-crosshair select-none overflow-hidden"
     >
