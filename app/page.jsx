@@ -258,7 +258,7 @@ export default function Home() {
 
           <div className="flex items-center">
             <a href="#contact" className="inline-flex items-center gap-2 px-6 py-2.5 rounded-full bg-black text-white text-xs font-semibold hover:bg-[#222] transition-all shadow-sm">
-              <span>Get in touch</span><ArrowRight className="w-3.5 h-3.5" />
+              <span>Let's Talk</span><ArrowRight className="w-3.5 h-3.5" />
             </a>
           </div>
         </nav>
